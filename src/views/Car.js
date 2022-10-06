@@ -33,6 +33,7 @@ function Cars() {
     },
     {
         "id": 4,
+
         "make": "Honda",
         "information": {
             "model": "240SX",
