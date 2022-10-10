@@ -1,10 +1,12 @@
 import { useState, useEffect, useContext, createContext } from 'react'
-import { getFirestore, getDoc, getDocs, collection, doc } from '@firebase/firestore'
+import { getFirestore, getDoc, getDocs, collection, collectionGroup, doc, addDoc, Timestamp, query, orderBy } from '@firebase/firestore'
+import { AuthContext } from './AuthProvider'
 
 export const DataContext = createContext()
 
 export const DataProvider = function(props) {
     const [listings, setListings] = useState([])
+    const { user } = useContext(AuthContext)
     const db = getFirestore()
 
     useEffect(() => {
@@ -15,8 +17,9 @@ export const DataProvider = function(props) {
                 console.log(data)
             }) */
         const getListings = async function() {
-            const collectionRef = collection(db, 'listings')
-            const collectionSnap = await getDocs(collectionRef)
+            const collectionRef = collectionGroup(db, 'listings')
+            const q = query(collectionRef, orderBy('dateCreated', 'desc'))
+            const collectionSnap = await getDocs(q)
 
             const listingsArr = []
 
@@ -31,24 +34,9 @@ export const DataProvider = function(props) {
             setListings(listingsArr)
         }
         getListings()
-    }, [])
+    }, [user])
 
     const getListing = async function(id, callback) {
-        /* fetch(`http://127.0.0.1:5000/api/post/${id}`)
-            .then((res) => res.json())
-            .then((data) => {
-                callback(data)
-                console.log(data)
-            }) */
-//////////////////////////////////////////////////////////
-            /*useEffect(() => {
-                fetch('https://my-json-server.typicode.com/Llang8/cars-api/cars')
-                    .then((res) => res.json())
-                    .then((data) => {
-                        setListings(data)
-                        console.log(data)
-                    })
-            }, []) */
 
         const docRef = doc(db, "listings", id)
         const docSnap = await getDoc(docRef)
@@ -61,26 +49,25 @@ export const DataProvider = function(props) {
         callback(listing)
     }
 
-    /* const getPokemon = function(pokemonId, callback) {
-        fetch(`https://pokeapi.co/api/v2/pokemon/${pokemonId}/`)
-            .then((res) => res.json())
-            .then((data) => {
-                callback(data)
-                console.log(data)
-            })
-    } */
+    const addListing = async function(vehicle, description) {
+        const listing = {
+            vehicle: vehicle,
+            description: description,
+            dateCreated: Timestamp.now()
+        }
 
-    const getPokemon = async function(pokemonId, callback) {
-        const res = await fetch(`https://pokeapi.co/api/v2/pokemon/${pokemonId}/`)
-        const data = await res.json()
-        callback(data)
-        console.log(data)
+        const collectionRef = collection(db, 'user', user.uid, 'listings')
+        const docRef = await addDoc(collectionRef, listing)
+
+        listing.id = docRef.id
+
+        setListings([listing, ...listings])
     }
 
     const value = {
         listings: listings,
-        getListing: getListing,
-        getPokemon: getPokemon
+        addListing: addListing,
+        getListing: getListing
     }
 
     return (
